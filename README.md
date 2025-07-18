@@ -76,3 +76,26 @@ This project requires an OpenAI API key. You can provide it in one of two ways:
      ```
 
 **Never commit your real API key to version control!**
+
+## Frontend Deployment
+
+This project includes a React frontend that is automatically deployed to GitHub Pages via GitHub Actions.
+
+### Deployment Process
+- **Automatic**: Pushing to the `main` branch triggers an automatic build and deployment
+- **Manual**: No manual deployment steps required
+- **Branch**: The `gh-pages` branch is automatically managed by GitHub Actions
+
+### Local Development
+```bash
+# Install dependencies
+npm install
+
+# Start development server
+npm start
+
+# Build for production (local testing)
+npm run build
+```
+
+The build output is automatically ignored by git (see `.gitignore`) to prevent committing compiled assets.
