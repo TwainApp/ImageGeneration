@@ -7,6 +7,7 @@ export interface QuestionGroup {
   createdAt: Date;
   order: number;
   isActive: boolean;
+  caption?: string;
 }
 
 export interface User {

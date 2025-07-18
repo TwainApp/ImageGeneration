@@ -113,27 +113,29 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   const handleGenerateNewQuestions = async () => {
     setIsGenerating(true);
     try {
-      // This would call your Python backend to generate new questions
-      // For now, we'll create a placeholder
-      const newGroup: Omit<QuestionGroup, 'id'> = {
-        title: `New Question Set ${Date.now()}`,
-        questions: [
-          "What's your favorite memory of us?",
-          "If we could travel anywhere, where would you want to go?",
-          "What's something you've always wanted to learn?",
-          "What's your biggest fear?",
-          "What makes you feel most loved?"
-        ],
-        theme: "Connection",
-        difficulty: "Easy",
-        createdAt: new Date(),
-        order: questionGroups.length,
-        isActive: true
-      };
+      // Call Firebase function to generate new questions
+      const response = await fetch('https://us-central1-twain-content-backend.cloudfunctions.net/generateQuestionGroup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
 
-      await addDoc(collection(db, 'questionGroups'), newGroup);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      
+      if (result.success) {
+        console.log('Question group generated successfully:', result.questionGroup);
+        // The Firestore listener will automatically update the UI
+      } else {
+        throw new Error(result.error || 'Failed to generate questions');
+      }
     } catch (error) {
       console.error('Error generating questions:', error);
+      alert('Failed to generate questions. Please try again.');
     } finally {
       setIsGenerating(false);
     }
