@@ -1,14 +1,16 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.processVideo = exports.generateBatchQuestions = exports.generateQuestionGroup = exports.listVideos = exports.testConfig = exports.healthCheck = void 0;
-const functions = require("firebase-functions");
-const admin = require("firebase-admin");
+const https_1 = require("firebase-functions/v2/https");
+const app_1 = require("firebase-admin/app");
+const firestore_1 = require("firebase-admin/firestore");
+const storage_1 = require("firebase-admin/storage");
 const openai_1 = require("openai");
 // Initialize Firebase Admin
-admin.initializeApp();
+(0, app_1.initializeApp)();
 // Initialize OpenAI
 const openai = new openai_1.default({
-    apiKey: process.env.OPENAI_API_KEY,
+    apiKey: process.env.OPENAI_API_KEY || '',
 });
 // Twain prompts data structure (matching Python implementation)
 const PROMPTS = {
@@ -100,7 +102,7 @@ async function generateCaption() {
             "#relationships #couplesgoals #talktogether #deepquestions");
     }
 }
-exports.healthCheck = functions.https.onRequest((request, response) => {
+exports.healthCheck = (0, https_1.onRequest)((request, response) => {
     response.json({
         status: 'healthy',
         timestamp: new Date().toISOString(),
@@ -108,7 +110,7 @@ exports.healthCheck = functions.https.onRequest((request, response) => {
         environment: 'Firebase Functions'
     });
 });
-exports.testConfig = functions.https.onRequest((request, response) => {
+exports.testConfig = (0, https_1.onRequest)((request, response) => {
     const config = {
         openai_api_key_set: !!process.env.OPENAI_API_KEY,
         firebase_storage_bucket_set: !!process.env.FIREBASE_STORAGE_BUCKET,
@@ -116,9 +118,9 @@ exports.testConfig = functions.https.onRequest((request, response) => {
     };
     response.json(config);
 });
-exports.listVideos = functions.https.onRequest(async (request, response) => {
+exports.listVideos = (0, https_1.onRequest)(async (request, response) => {
     try {
-        const bucket = admin.storage().bucket();
+        const bucket = (0, storage_1.getStorage)().bucket();
         const [files] = await bucket.getFiles({ prefix: 'queue/' });
         const videos = files
             .filter(file => file.name.endsWith('.mp4'))
@@ -142,7 +144,7 @@ exports.listVideos = functions.https.onRequest(async (request, response) => {
     }
 });
 // Generate new question group (called from frontend "Generate New Questions" button)
-exports.generateQuestionGroup = functions.https.onRequest(async (request, response) => {
+exports.generateQuestionGroup = (0, https_1.onRequest)(async (request, response) => {
     try {
         // Verify the request method
         if (request.method !== 'POST') {
@@ -177,7 +179,7 @@ exports.generateQuestionGroup = functions.https.onRequest(async (request, respon
             caption: caption
         };
         // Add to Firestore
-        const db = admin.firestore();
+        const db = (0, firestore_1.getFirestore)();
         const docRef = await db.collection('questionGroups').add(questionGroup);
         response.json({
             success: true,
@@ -195,7 +197,7 @@ exports.generateQuestionGroup = functions.https.onRequest(async (request, respon
     }
 });
 // Batch generate multiple question groups (matching Python batch generation)
-exports.generateBatchQuestions = functions.https.onRequest(async (request, response) => {
+exports.generateBatchQuestions = (0, https_1.onRequest)(async (request, response) => {
     try {
         // Verify the request method
         if (request.method !== 'POST') {
@@ -231,7 +233,7 @@ exports.generateBatchQuestions = functions.https.onRequest(async (request, respo
                     caption: caption
                 };
                 // Add to Firestore
-                const db = admin.firestore();
+                const db = (0, firestore_1.getFirestore)();
                 const docRef = await db.collection('questionGroups').add(questionGroup);
                 generatedGroups.push(Object.assign({ id: docRef.id }, questionGroup));
                 console.log(`Generated question group ${i + 1}/${count}: ${category} (${difficulty})`);
@@ -256,7 +258,7 @@ exports.generateBatchQuestions = functions.https.onRequest(async (request, respo
         });
     }
 });
-exports.processVideo = functions.https.onRequest(async (request, response) => {
+exports.processVideo = (0, https_1.onRequest)(async (request, response) => {
     try {
         // TODO: Implement video processing logic
         response.json({

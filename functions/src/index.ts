@@ -1,13 +1,15 @@
-import * as functions from 'firebase-functions';
-import * as admin from 'firebase-admin';
+import { onRequest } from 'firebase-functions/v2/https';
+import { initializeApp } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
+import { getStorage } from 'firebase-admin/storage';
 import OpenAI from 'openai';
 
 // Initialize Firebase Admin
-admin.initializeApp();
+initializeApp();
 
 // Initialize OpenAI
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+  apiKey: process.env.OPENAI_API_KEY || '',
 });
 
 // Twain prompts data structure (matching Python implementation)
@@ -110,7 +112,7 @@ async function generateCaption(): Promise<string> {
   }
 }
 
-export const healthCheck = functions.https.onRequest((request, response) => {
+export const healthCheck = onRequest((request, response) => {
   response.json({
     status: 'healthy',
     timestamp: new Date().toISOString(),
@@ -119,7 +121,7 @@ export const healthCheck = functions.https.onRequest((request, response) => {
   });
 });
 
-export const testConfig = functions.https.onRequest((request, response) => {
+export const testConfig = onRequest((request, response) => {
   const config = {
     openai_api_key_set: !!process.env.OPENAI_API_KEY,
     firebase_storage_bucket_set: !!process.env.FIREBASE_STORAGE_BUCKET,
@@ -128,9 +130,9 @@ export const testConfig = functions.https.onRequest((request, response) => {
   response.json(config);
 });
 
-export const listVideos = functions.https.onRequest(async (request, response) => {
+export const listVideos = onRequest(async (request, response) => {
   try {
-    const bucket = admin.storage().bucket();
+    const bucket = getStorage().bucket();
     const [files] = await bucket.getFiles({ prefix: 'queue/' });
     
     const videos = files
@@ -156,7 +158,7 @@ export const listVideos = functions.https.onRequest(async (request, response) =>
 });
 
 // Generate new question group (called from frontend "Generate New Questions" button)
-export const generateQuestionGroup = functions.https.onRequest(async (request, response) => {
+export const generateQuestionGroup = onRequest(async (request, response) => {
   try {
     // Verify the request method
     if (request.method !== 'POST') {
@@ -197,7 +199,7 @@ export const generateQuestionGroup = functions.https.onRequest(async (request, r
     };
 
     // Add to Firestore
-    const db = admin.firestore();
+    const db = getFirestore();
     const docRef = await db.collection('questionGroups').add(questionGroup);
 
     response.json({
@@ -220,7 +222,7 @@ export const generateQuestionGroup = functions.https.onRequest(async (request, r
 });
 
 // Batch generate multiple question groups (matching Python batch generation)
-export const generateBatchQuestions = functions.https.onRequest(async (request, response) => {
+export const generateBatchQuestions = onRequest(async (request, response) => {
   try {
     // Verify the request method
     if (request.method !== 'POST') {
@@ -263,7 +265,7 @@ export const generateBatchQuestions = functions.https.onRequest(async (request, 
         };
 
         // Add to Firestore
-        const db = admin.firestore();
+        const db = getFirestore();
         const docRef = await db.collection('questionGroups').add(questionGroup);
         
         generatedGroups.push({
@@ -295,7 +297,7 @@ export const generateBatchQuestions = functions.https.onRequest(async (request, 
   }
 });
 
-export const processVideo = functions.https.onRequest(async (request, response) => {
+export const processVideo = onRequest(async (request, response) => {
   try {
     // TODO: Implement video processing logic
     response.json({
