@@ -37,13 +37,16 @@ const SortableQuestionGroup: React.FC<{ questionGroup: QuestionGroup; onDelete: 
         <div className="flex-1">
           <h3 className="font-semibold text-gray-900">{questionGroup.title}</h3>
           <p className="text-sm text-gray-600">Theme: {questionGroup.theme} • Difficulty: {questionGroup.difficulty}</p>
-          <div className="mt-2">
-            {questionGroup.questions.slice(0, 3).map((question, index) => (
-              <p key={index} className="text-sm text-gray-700 truncate">• {question}</p>
+          <div className="mt-4 flex flex-col gap-3">
+            {questionGroup.questions.map((question, index) => (
+              <div
+                key={index}
+                className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 shadow-sm flex items-start gap-2"
+              >
+                <span className="text-blue-500 mt-0.5">{/* icon */} <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8s-9-3.582-9-8a9 9 0 1118 0z" /></svg></span>
+                <span className="text-gray-800 text-base">{question}</span>
+              </div>
             ))}
-            {questionGroup.questions.length > 3 && (
-              <p className="text-sm text-gray-500">+{questionGroup.questions.length - 3} more questions</p>
-            )}
           </div>
         </div>
         <div className="flex space-x-2 ml-4">
