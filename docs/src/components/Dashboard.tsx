@@ -70,6 +70,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
+  const [isRetrying, setIsRetrying] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -84,26 +86,49 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
       return;
     }
 
+    // Reset retry count when user changes
+    setRetryCount(0);
+    setAuthError(null);
+
     // Wait for user to be fully authenticated before connecting to Firestore
     const connectToFirestore = async () => {
       try {
         // Force refresh the user's ID token to ensure it's current
-        await user.getIdToken(true);
+        const token = await user.getIdToken(true);
+        console.log('User authenticated, token refreshed');
         
         const q = query(collection(db, 'questionGroups'), orderBy('order', 'asc'));
+        console.log('Setting up Firestore listener...');
         const unsubscribe = onSnapshot(q, (snapshot) => {
-          const groups = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-          })) as QuestionGroup[];
+          const groups = snapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+              id: doc.id,
+              ...data,
+              // Convert Firestore Timestamp to Date if it exists
+              createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : data.createdAt,
+              // Ensure order is a number
+              order: data.order || 0
+            };
+          }) as QuestionGroup[];
+          console.log('Firestore data received:', groups.length, 'question groups');
           setQuestionGroups(groups);
           setIsLoading(false);
+          setRetryCount(0); // Reset retry count on success
         }, (error) => {
           console.error('Firestore error:', error);
           setIsLoading(false);
+          
+          // Handle different error types
           if (error.code === 'permission-denied') {
             console.log('Permission denied - user may not be fully authenticated');
             setAuthError('Authentication error. Please try logging out and back in.');
+          } else if (error.code === 'unavailable' || error.code === 'deadline-exceeded') {
+            // Network or timeout errors - retry with exponential backoff
+            handleRetry();
+          } else {
+            // Other errors - show error but don't retry
+            setAuthError(`Connection error: ${error.message}`);
           }
         });
 
@@ -111,7 +136,27 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
       } catch (error) {
         console.error('Error refreshing token:', error);
         setIsLoading(false);
+        setAuthError('Failed to authenticate. Please try again.');
         return () => {};
+      }
+    };
+
+    const handleRetry = () => {
+      const maxRetries = 3;
+      if (retryCount < maxRetries) {
+        setIsRetrying(true);
+        const delay = Math.pow(2, retryCount) * 1000; // Exponential backoff: 1s, 2s, 4s
+        
+        console.log(`Retrying Firestore connection in ${delay}ms (attempt ${retryCount + 1}/${maxRetries})`);
+        
+        setTimeout(() => {
+          setRetryCount(prev => prev + 1);
+          setIsRetrying(false);
+          connectToFirestore();
+        }, delay);
+      } else {
+        console.log('Max retries reached, stopping attempts');
+        setAuthError('Failed to connect after multiple attempts. Please refresh the page.');
       }
     };
 
@@ -119,7 +164,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
     return () => {
       unsubscribe.then(unsub => unsub());
     };
-  }, [user]);
+  }, [user, retryCount]);
 
   const handleDragEnd = async (event: any) => {
     const { active, over } = event;
@@ -154,6 +199,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
     try {
       // Ensure user has a fresh token
       const idToken = await user.getIdToken(true);
+      console.log('Generating questions with token:', idToken.substring(0, 20) + '...');
       
       // Call Firebase function to generate new questions
       const response = await fetch('https://us-central1-twain-content-backend.cloudfunctions.net/generateQuestionGroup', {
@@ -204,6 +250,23 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
     }
   };
 
+  // Test function to check Firestore write permissions
+  const testFirestoreWrite = async () => {
+    try {
+      const testDoc = {
+        test: true,
+        timestamp: new Date(),
+        userId: user.uid
+      };
+      await addDoc(collection(db, 'test'), testDoc);
+      console.log('Firestore write test successful');
+      alert('Firestore write test successful!');
+    } catch (error: any) {
+      console.error('Firestore write test failed:', error);
+      alert('Firestore write test failed: ' + (error.message || 'Unknown error'));
+    }
+  };
+
   const handleLogout = async () => {
     try {
       await signOut(auth);
@@ -237,23 +300,31 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-6 flex justify-between items-center">
           <h2 className="text-xl font-semibold text-gray-900">Question Groups</h2>
-          <button
-            onClick={handleGenerateNewQuestions}
-            disabled={isGenerating}
-            className="bg-green-500 hover:bg-green-600 disabled:bg-gray-400 text-white px-4 py-2 rounded-lg transition-colors flex items-center space-x-2"
-          >
-            {isGenerating ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                <span>Generating...</span>
-              </>
-            ) : (
-              <>
-                <span>+</span>
-                <span>Generate New Questions</span>
-              </>
-            )}
-          </button>
+          <div className="flex space-x-2">
+            <button
+              onClick={testFirestoreWrite}
+              className="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-2 rounded-lg transition-colors text-sm"
+            >
+              Test Firestore
+            </button>
+            <button
+              onClick={handleGenerateNewQuestions}
+              disabled={isGenerating}
+              className="bg-green-500 hover:bg-green-600 disabled:bg-gray-400 text-white px-4 py-2 rounded-lg transition-colors flex items-center space-x-2"
+            >
+              {isGenerating ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  <span>Generating...</span>
+                </>
+              ) : (
+                <>
+                  <span>+</span>
+                  <span>Generate New Questions</span>
+                </>
+              )}
+            </button>
+          </div>
         </div>
 
         {/* Question Groups List */}
@@ -261,25 +332,45 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
           {authError ? (
             <div className="p-8 text-center">
               <div className="text-red-500 mb-4">
-                <p className="font-semibold">Authentication Error</p>
+                <p className="font-semibold">Connection Error</p>
                 <p className="text-sm">{authError}</p>
+                {retryCount > 0 && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    Retry attempt {retryCount}/3
+                  </p>
+                )}
               </div>
-              <button
-                onClick={() => {
-                  setAuthError(null);
-                  setIsLoading(true);
-                  // Force a page reload to re-authenticate
-                  window.location.reload();
-                }}
-                className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors"
-              >
-                Retry Authentication
-              </button>
+              <div className="flex justify-center space-x-2">
+                <button
+                  onClick={() => {
+                    setAuthError(null);
+                    setRetryCount(0);
+                    setIsLoading(true);
+                    // Force a page reload to re-authenticate
+                    window.location.reload();
+                  }}
+                  className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors"
+                >
+                  Refresh Page
+                </button>
+                {retryCount < 3 && (
+                  <button
+                    onClick={() => {
+                      setAuthError(null);
+                      setRetryCount(0);
+                      setIsLoading(true);
+                    }}
+                    className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition-colors"
+                  >
+                    Try Again
+                  </button>
+                )}
+              </div>
             </div>
-          ) : isLoading ? (
+          ) : isLoading || isRetrying ? (
             <div className="p-8 text-center text-gray-500">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
-              <p>Loading question groups...</p>
+              <p>{isRetrying ? `Retrying connection... (${retryCount}/3)` : 'Loading question groups...'}</p>
             </div>
           ) : questionGroups.length === 0 ? (
             <div className="p-8 text-center text-gray-500">
