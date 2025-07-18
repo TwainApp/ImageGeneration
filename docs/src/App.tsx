@@ -10,8 +10,19 @@ function App() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       console.log('Auth state changed:', user ? 'User logged in' : 'No user');
+      
+      if (user) {
+        try {
+          // Force refresh the token to ensure it's current
+          await user.getIdToken(true);
+          console.log('User token refreshed successfully');
+        } catch (error) {
+          console.error('Error refreshing user token:', error);
+        }
+      }
+      
       setUser(user);
       setLoading(false);
     }, (error) => {

@@ -69,6 +69,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   const [questionGroups, setQuestionGroups] = useState<QuestionGroup[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -83,25 +84,41 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
       return;
     }
 
-    // Only connect to Firestore after user is fully authenticated
-    const q = query(collection(db, 'questionGroups'), orderBy('order', 'asc'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const groups = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as QuestionGroup[];
-      setQuestionGroups(groups);
-      setIsLoading(false);
-    }, (error) => {
-      console.error('Firestore error:', error);
-      setIsLoading(false);
-      // Handle authentication errors gracefully
-      if (error.code === 'permission-denied') {
-        console.log('User not authenticated, waiting for auth...');
-      }
-    });
+    // Wait for user to be fully authenticated before connecting to Firestore
+    const connectToFirestore = async () => {
+      try {
+        // Force refresh the user's ID token to ensure it's current
+        await user.getIdToken(true);
+        
+        const q = query(collection(db, 'questionGroups'), orderBy('order', 'asc'));
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+          const groups = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          })) as QuestionGroup[];
+          setQuestionGroups(groups);
+          setIsLoading(false);
+        }, (error) => {
+          console.error('Firestore error:', error);
+          setIsLoading(false);
+          if (error.code === 'permission-denied') {
+            console.log('Permission denied - user may not be fully authenticated');
+            setAuthError('Authentication error. Please try logging out and back in.');
+          }
+        });
 
-    return () => unsubscribe();
+        return unsubscribe;
+      } catch (error) {
+        console.error('Error refreshing token:', error);
+        setIsLoading(false);
+        return () => {};
+      }
+    };
+
+    const unsubscribe = connectToFirestore();
+    return () => {
+      unsubscribe.then(unsub => unsub());
+    };
   }, [user]);
 
   const handleDragEnd = async (event: any) => {
@@ -135,8 +152,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
     
     setIsGenerating(true);
     try {
-      // Get the user's ID token for authentication
-      const idToken = await user.getIdToken();
+      // Ensure user has a fresh token
+      const idToken = await user.getIdToken(true);
       
       // Call Firebase function to generate new questions
       const response = await fetch('https://us-central1-twain-content-backend.cloudfunctions.net/generateQuestionGroup', {
@@ -241,7 +258,25 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
 
         {/* Question Groups List */}
         <div className="bg-white rounded-lg shadow">
-          {isLoading ? (
+          {authError ? (
+            <div className="p-8 text-center">
+              <div className="text-red-500 mb-4">
+                <p className="font-semibold">Authentication Error</p>
+                <p className="text-sm">{authError}</p>
+              </div>
+              <button
+                onClick={() => {
+                  setAuthError(null);
+                  setIsLoading(true);
+                  // Force a page reload to re-authenticate
+                  window.location.reload();
+                }}
+                className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors"
+              >
+                Retry Authentication
+              </button>
+            </div>
+          ) : isLoading ? (
             <div className="p-8 text-center text-gray-500">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
               <p>Loading question groups...</p>
