@@ -1,0 +1,49 @@
+# Environment and credentials
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.json
+
+# Firebase service account keys
+serviceAccountKey.json
+*-service-account*.json
+firebase-service-account*.json
+
+# TikTok API credentials
+tiktok_auth.py
+
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Production builds
+build/
+dist/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Firebase
+.firebase/
+firebase-debug.log
+firebase-debug.*.log
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+
+# Logs
+*.log

@@ -1,0 +1,50 @@
+---
+alwaysApply: true
+---
+## 2. Output Consistency
+- All images must be 1080x1920 (portrait).
+- Font: DM Serif Display (`dmserifdisplay.ttf`)
+- Colors: Charcoal background (`#2E2E2E`), Blush text (`#FADADD`)
+- Slide order: Intro → Q1–Q5 → Follow
+- File names must match: `question_0.jpg`, ..., `question_6.jpg`, `daily_video.mp4`, `caption.txt`
+- Watermark: The word "Twain" must appear, centered, 140px from the bottom of each image.
+
+---
+
+## 3. Prompt & Caption Generation
+- Prompts must be generated using OpenAI (GPT-3.5 Turbo or better).
+- Each question must be:
+  - Under 200 characters
+  - One line, no bullets or numbering
+- Captions must:
+  - Be under 200 characters
+  - Include 3–5 hashtags
+  - Use fallback text if generation fails
+
+---
+
+## 4. Video Generation
+- Videos must be 1080x1920, ~12 seconds, with 1.4s per slide and 0.4s crossfade.
+- No movement/zoom effects; only fade transitions.
+
+---
+
+## 5. Firebase Integration (if present)
+- All uploads must preserve the folder structure and file names.
+- Status tracking and clean-up must not interfere with local output integrity.
+
+---
+
+## 6. Testing & Validation
+- All outputs must pass the integrity tests listed in ARCHITECTURE.md.
+- Any changes to output format, file names, or branding must be explicitly justified and documented.
+
+---
+
+## 7. Branding & Attribution
+- All generated content must visually match the branding described in ARCHITECTURE.md.
+- Attribution for AI, font, and authorship must be preserved in documentation.
+description:
+globs:
+alwaysApply: false
+---
