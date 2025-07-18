@@ -1,0 +1,22 @@
+{
+  "Intimacy": {
+    "light": "Ask a flirty or playful question about attraction, touch, or affection. Keep it light — something that makes your partner smile.",
+    "medium": "Ask a question about what makes your partner feel close, desired, or connected. Something real but still comfortable to talk about.",
+    "deep": "Ask something honest about boundaries, vulnerability, or how you both communicate around sex and intimacy. Keep it respectful and real."
+  },
+  "Connection": {
+    "light": "Ask a sweet or quirky question about how your partner shows care — like their love language or favorite way to feel close.",
+    "medium": "Ask a question about emotional needs or how your partner feels supported and understood in the relationship.",
+    "deep": "Ask something honest about past relationship patterns, trust, or what helps your partner feel emotionally safe and loved."
+  },
+  "Memories": {
+    "light": "Ask a fun or nostalgic question — like a favorite childhood memory or a ‘what if’ moment you both can laugh about.",
+    "medium": "Ask about a meaningful memory you’ve shared or a dream you could build together in the future.",
+    "deep": "Ask something reflective about turning points, personal growth, or how your partner sees their future unfolding."
+  },
+  "Everyday": {
+    "light": "Ask something light and random — about habits, routines, or preferences that make your partner uniquely them.",
+    "medium": "Ask a thoughtful question about how your partner sees the world, handles stress, or makes daily choices.",
+    "deep": "Ask something reflective about identity, values, or what really matters most in life. Keep it open and honest."
+  }
+}

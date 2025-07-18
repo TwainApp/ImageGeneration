@@ -56,12 +56,12 @@ This project requires an OpenAI API key. You can provide it in one of two ways:
      - On Windows (PowerShell):
        ```powershell
        $env:OPENAI_API_KEY="sk-..."
-       python generate_twain_week.py
+       python backend/generate_twain_week.py
        ```
      - On Mac/Linux (bash):
        ```bash
        export OPENAI_API_KEY="sk-..."
-       python generate_twain_week.py
+       python backend/generate_twain_week.py
        ```
 
 2. **.env File** (convenient for local development):

@@ -4,12 +4,12 @@
 .env.development.local
 .env.test.local
 .env.production.local
-*.json
 
-# Firebase service account keys
+# Firebase service account keys (specific JSON files only)
 serviceAccountKey.json
 *-service-account*.json
 firebase-service-account*.json
+backend/serviceAccountKey.json
 
 # TikTok API credentials
 tiktok_auth.py
@@ -23,6 +23,9 @@ yarn-error.log*
 # Production builds
 build/
 dist/
+static/
+asset-manifest.json
+index.html
 
 # IDE files
 .vscode/
