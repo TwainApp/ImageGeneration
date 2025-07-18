@@ -23,9 +23,7 @@ yarn-error.log*
 # Production builds
 build/
 dist/
-static/
 asset-manifest.json
-index.html
 
 # IDE files
 .vscode/
