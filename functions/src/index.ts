@@ -2,6 +2,7 @@ import { onRequest } from 'firebase-functions/v1/https';
 import { initializeApp } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import { getStorage } from 'firebase-admin/storage';
+import { getAuth } from 'firebase-admin/auth';
 import OpenAI from 'openai';
 
 // Initialize Firebase Admin
@@ -112,26 +113,31 @@ async function generateCaption(): Promise<string> {
   }
 }
 
-export const healthCheck = onRequest((request, response) => {
-  response.json({
-    status: 'healthy',
-    timestamp: new Date().toISOString(),
-    message: 'Twain API is running on Firebase Functions',
-    environment: 'Firebase Functions'
-  });
-});
-
-export const testConfig = onRequest((request, response) => {
-  const config = {
-    openai_api_key_set: !!process.env.OPENAI_API_KEY,
-    firebase_storage_bucket_set: !!process.env.FIREBASE_STORAGE_BUCKET,
-    timestamp: new Date().toISOString()
-  };
-  response.json(config);
-});
-
 export const listVideos = onRequest(async (request, response) => {
   try {
+    // Verify authentication
+    const authHeader = request.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      response.status(401).json({
+        success: false,
+        error: 'Authentication required'
+      });
+      return;
+    }
+
+    const idToken = authHeader.split('Bearer ')[1];
+    try {
+      const decodedToken = await getAuth().verifyIdToken(idToken);
+      console.log('Authenticated user:', decodedToken.uid);
+    } catch (authError) {
+      console.error('Authentication error:', authError);
+      response.status(401).json({
+        success: false,
+        error: 'Invalid authentication token'
+      });
+      return;
+    }
+
     const bucket = getStorage().bucket();
     const [files] = await bucket.getFiles({ prefix: 'queue/' });
     
@@ -165,6 +171,29 @@ export const generateQuestionGroup = onRequest(async (request, response) => {
       response.status(405).json({
         success: false,
         error: 'Method not allowed. Use POST.'
+      });
+      return;
+    }
+
+    // Verify authentication
+    const authHeader = request.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      response.status(401).json({
+        success: false,
+        error: 'Authentication required'
+      });
+      return;
+    }
+
+    const idToken = authHeader.split('Bearer ')[1];
+    try {
+      const decodedToken = await getAuth().verifyIdToken(idToken);
+      console.log('Authenticated user:', decodedToken.uid);
+    } catch (authError) {
+      console.error('Authentication error:', authError);
+      response.status(401).json({
+        success: false,
+        error: 'Invalid authentication token'
       });
       return;
     }
@@ -229,6 +258,29 @@ export const generateBatchQuestions = onRequest(async (request, response) => {
       response.status(405).json({
         success: false,
         error: 'Method not allowed. Use POST.'
+      });
+      return;
+    }
+
+    // Verify authentication
+    const authHeader = request.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      response.status(401).json({
+        success: false,
+        error: 'Authentication required'
+      });
+      return;
+    }
+
+    const idToken = authHeader.split('Bearer ')[1];
+    try {
+      const decodedToken = await getAuth().verifyIdToken(idToken);
+      console.log('Authenticated user:', decodedToken.uid);
+    } catch (authError) {
+      console.error('Authentication error:', authError);
+      response.status(401).json({
+        success: false,
+        error: 'Invalid authentication token'
       });
       return;
     }

@@ -1,10 +1,11 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.processVideo = exports.generateBatchQuestions = exports.generateQuestionGroup = exports.listVideos = exports.testConfig = exports.healthCheck = void 0;
-const https_1 = require("firebase-functions/v2/https");
+exports.processVideo = exports.generateBatchQuestions = exports.generateQuestionGroup = exports.listVideos = void 0;
+const https_1 = require("firebase-functions/v1/https");
 const app_1 = require("firebase-admin/app");
 const firestore_1 = require("firebase-admin/firestore");
 const storage_1 = require("firebase-admin/storage");
+const auth_1 = require("firebase-admin/auth");
 const openai_1 = require("openai");
 // Initialize Firebase Admin
 (0, app_1.initializeApp)();
@@ -102,24 +103,30 @@ async function generateCaption() {
             "#relationships #couplesgoals #talktogether #deepquestions");
     }
 }
-exports.healthCheck = (0, https_1.onRequest)((request, response) => {
-    response.json({
-        status: 'healthy',
-        timestamp: new Date().toISOString(),
-        message: 'Twain API is running on Firebase Functions',
-        environment: 'Firebase Functions'
-    });
-});
-exports.testConfig = (0, https_1.onRequest)((request, response) => {
-    const config = {
-        openai_api_key_set: !!process.env.OPENAI_API_KEY,
-        firebase_storage_bucket_set: !!process.env.FIREBASE_STORAGE_BUCKET,
-        timestamp: new Date().toISOString()
-    };
-    response.json(config);
-});
 exports.listVideos = (0, https_1.onRequest)(async (request, response) => {
     try {
+        // Verify authentication
+        const authHeader = request.headers.authorization;
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            response.status(401).json({
+                success: false,
+                error: 'Authentication required'
+            });
+            return;
+        }
+        const idToken = authHeader.split('Bearer ')[1];
+        try {
+            const decodedToken = await (0, auth_1.getAuth)().verifyIdToken(idToken);
+            console.log('Authenticated user:', decodedToken.uid);
+        }
+        catch (authError) {
+            console.error('Authentication error:', authError);
+            response.status(401).json({
+                success: false,
+                error: 'Invalid authentication token'
+            });
+            return;
+        }
         const bucket = (0, storage_1.getStorage)().bucket();
         const [files] = await bucket.getFiles({ prefix: 'queue/' });
         const videos = files
@@ -151,6 +158,28 @@ exports.generateQuestionGroup = (0, https_1.onRequest)(async (request, response)
             response.status(405).json({
                 success: false,
                 error: 'Method not allowed. Use POST.'
+            });
+            return;
+        }
+        // Verify authentication
+        const authHeader = request.headers.authorization;
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            response.status(401).json({
+                success: false,
+                error: 'Authentication required'
+            });
+            return;
+        }
+        const idToken = authHeader.split('Bearer ')[1];
+        try {
+            const decodedToken = await (0, auth_1.getAuth)().verifyIdToken(idToken);
+            console.log('Authenticated user:', decodedToken.uid);
+        }
+        catch (authError) {
+            console.error('Authentication error:', authError);
+            response.status(401).json({
+                success: false,
+                error: 'Invalid authentication token'
             });
             return;
         }
@@ -204,6 +233,28 @@ exports.generateBatchQuestions = (0, https_1.onRequest)(async (request, response
             response.status(405).json({
                 success: false,
                 error: 'Method not allowed. Use POST.'
+            });
+            return;
+        }
+        // Verify authentication
+        const authHeader = request.headers.authorization;
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            response.status(401).json({
+                success: false,
+                error: 'Authentication required'
+            });
+            return;
+        }
+        const idToken = authHeader.split('Bearer ')[1];
+        try {
+            const decodedToken = await (0, auth_1.getAuth)().verifyIdToken(idToken);
+            console.log('Authenticated user:', decodedToken.uid);
+        }
+        catch (authError) {
+            console.error('Authentication error:', authError);
+            response.status(401).json({
+                success: false,
+                error: 'Invalid authentication token'
             });
             return;
         }

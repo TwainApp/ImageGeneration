@@ -68,6 +68,7 @@ const SortableQuestionGroup: React.FC<{ questionGroup: QuestionGroup; onDelete: 
 const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   const [questionGroups, setQuestionGroups] = useState<QuestionGroup[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -77,8 +78,12 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   );
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || !user.uid) {
+      setIsLoading(false);
+      return;
+    }
 
+    // Only connect to Firestore after user is fully authenticated
     const q = query(collection(db, 'questionGroups'), orderBy('order', 'asc'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const groups = snapshot.docs.map(doc => ({
@@ -86,6 +91,14 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
         ...doc.data()
       })) as QuestionGroup[];
       setQuestionGroups(groups);
+      setIsLoading(false);
+    }, (error) => {
+      console.error('Firestore error:', error);
+      setIsLoading(false);
+      // Handle authentication errors gracefully
+      if (error.code === 'permission-denied') {
+        console.log('User not authenticated, waiting for auth...');
+      }
     });
 
     return () => unsubscribe();
@@ -94,7 +107,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   const handleDragEnd = async (event: any) => {
     const { active, over } = event;
 
-    if (active.id !== over.id) {
+    if (active.id !== over.id && user?.uid) {
       const oldIndex = questionGroups.findIndex(qg => qg.id === active.id);
       const newIndex = questionGroups.findIndex(qg => qg.id === over.id);
       
@@ -103,21 +116,34 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
 
       // Update order in Firestore
       for (let i = 0; i < newOrder.length; i++) {
-        await updateDoc(doc(db, 'questionGroups', newOrder[i].id), {
-          order: i
-        });
+        try {
+          await updateDoc(doc(db, 'questionGroups', newOrder[i].id), {
+            order: i
+          });
+        } catch (error) {
+          console.error('Error updating question group order:', error);
+        }
       }
     }
   };
 
   const handleGenerateNewQuestions = async () => {
+    if (!user?.uid) {
+      alert('Please log in to generate questions.');
+      return;
+    }
+    
     setIsGenerating(true);
     try {
+      // Get the user's ID token for authentication
+      const idToken = await user.getIdToken();
+      
       // Call Firebase function to generate new questions
       const response = await fetch('https://us-central1-twain-content-backend.cloudfunctions.net/generateQuestionGroup', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`,
         },
       });
 
@@ -142,6 +168,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   };
 
   const handleDeleteQuestionGroup = async (id: string) => {
+    if (!user?.uid) return;
+    
     try {
       await deleteDoc(doc(db, 'questionGroups', id));
     } catch (error) {
@@ -213,7 +241,12 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
 
         {/* Question Groups List */}
         <div className="bg-white rounded-lg shadow">
-          {questionGroups.length === 0 ? (
+          {isLoading ? (
+            <div className="p-8 text-center text-gray-500">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
+              <p>Loading question groups...</p>
+            </div>
+          ) : questionGroups.length === 0 ? (
             <div className="p-8 text-center text-gray-500">
               <p>No question groups yet. Click "Generate New Questions" to get started!</p>
             </div>
