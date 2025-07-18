@@ -97,7 +97,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
     const connectToFirestore = async () => {
       try {
         // Force refresh the user's ID token to ensure it's current
-        const token = await user.getIdToken(true);
+        await user.getIdToken(true);
         console.log('User authenticated, token refreshed');
         
         const q = query(collection(db, 'questionGroups'), orderBy('order', 'asc'));
