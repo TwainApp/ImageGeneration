@@ -32,7 +32,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
     <div className="min-h-screen bg-gradient-to-br from-purple-900 via-pink-900 to-red-900 flex items-center justify-center">
       <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 max-w-md w-full mx-4">
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-white mb-2">Twain</h1>
+          <h1 className="text-4xl font-bold text-white mb-2 font-serif-display">Twain</h1>
           <p className="text-white/80 text-lg">Admin Dashboard</p>
         </div>
         

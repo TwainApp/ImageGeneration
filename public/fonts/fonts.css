@@ -1,6 +1,6 @@
 @font-face {
     font-family: 'DM Serif Display';
-    src: url('/ImageGeneration/fonts/dmserifdisplay.ttf') format('truetype');
+    src: url('./dmserifdisplay.ttf') format('truetype'); /* relative path from fonts.css */
     font-weight: normal;
     font-style: normal;
   }
